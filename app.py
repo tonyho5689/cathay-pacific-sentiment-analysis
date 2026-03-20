@@ -8,7 +8,7 @@ import os
 # --- Load Models (cached) ---
 @st.cache_resource
 def load_asr_pipeline():
-    """Load Whisper Medium with task=translate (any language audio → English text)."""
+    """Load Whisper Medium with task=translate (any language audio -> English text)."""
     return pipeline(
         "automatic-speech-recognition",
         model="openai/whisper-medium",
@@ -29,7 +29,7 @@ def load_sentiment_pipeline():
 @st.cache_resource
 def load_translator():
     """Load Helsinki-NLP/opus-mt-mul-en as a pre-processing utility for text input.
-    This is NOT a core pipeline — it simply translates non-English text to English
+    This is NOT a core pipeline -- it simply translates non-English text to English
     before passing it to Pipeline 2 (Sentiment). For audio input, Whisper's built-in
     task=translate handles translation directly."""
     model_name = "Helsinki-NLP/opus-mt-mul-en"
@@ -38,49 +38,56 @@ def load_translator():
     return tokenizer, model
 
 
-# --- Sentiment Display Helper ---
-SENTIMENT_COLORS = {
-    "Very Negative": "#FF4B4B",
-    "Negative": "#FF8C00",
-    "Neutral": "#FFD700",
-    "Positive": "#90EE90",
-    "Very Positive": "#00CC00",
-}
-
-SENTIMENT_EMOJIS = {
-    "Very Negative": "😡",
-    "Negative": "😞",
-    "Neutral": "😐",
-    "Positive": "🙂",
-    "Very Positive": "😄",
+# --- Sentiment Display ---
+SENTIMENT_CONFIG = {
+    "Very Negative": {"color": "#DC3545", "emoji": "😡", "bg": "#FDE8EA"},
+    "Negative":      {"color": "#E67E22", "emoji": "😞", "bg": "#FDF0E6"},
+    "Neutral":       {"color": "#F5B041", "emoji": "😐", "bg": "#FEF7E8"},
+    "Positive":      {"color": "#27AE60", "emoji": "🙂", "bg": "#E8F8EF"},
+    "Very Positive": {"color": "#006564", "emoji": "😄", "bg": "#E6F2F2"},
 }
 
 
 def display_sentiment(result):
-    """Display sentiment analysis result with color coding."""
+    """Display sentiment analysis result with color-coded card."""
     label = result[0]["label"]
     score = result[0]["score"]
-
-    color = SENTIMENT_COLORS.get(label, "#808080")
-    emoji = SENTIMENT_EMOJIS.get(label, "❓")
-
-    st.markdown("### Sentiment Analysis Result")
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Sentiment", f"{emoji} {label}")
-    with col2:
-        st.metric("Confidence", f"{score:.1%}")
-    with col3:
-        st.progress(score, text=f"{score:.1%}")
+    config = SENTIMENT_CONFIG.get(label, {"color": "#808080", "emoji": "?", "bg": "#F0F0F0"})
 
     st.markdown(
-        f'<div style="padding: 20px; border-radius: 10px; '
-        f"background-color: {color}20; border-left: 5px solid {color}; "
-        f'margin: 10px 0;">'
-        f'<h3 style="color: {color}; margin: 0;">{emoji} {label}</h3>'
-        f"<p>Confidence: {score:.1%}</p>"
-        f"</div>",
+        f"""
+        <div style="
+            padding: 24px 28px;
+            border-radius: 12px;
+            background: {config['bg']};
+            border-left: 6px solid {config['color']};
+            margin: 16px 0;
+        ">
+            <div style="font-size: 2.2rem; margin-bottom: 4px;">
+                {config['emoji']}
+            </div>
+            <div style="font-size: 1.4rem; font-weight: 700; color: {config['color']}; margin-bottom: 8px;">
+                {label}
+            </div>
+            <div style="font-size: 0.95rem; color: #555;">
+                Confidence: <strong>{score:.1%}</strong>
+            </div>
+            <div style="
+                margin-top: 12px;
+                background: #E0E0E0;
+                border-radius: 6px;
+                height: 10px;
+                overflow: hidden;
+            ">
+                <div style="
+                    width: {score * 100:.1f}%;
+                    height: 100%;
+                    background: {config['color']};
+                    border-radius: 6px;
+                "></div>
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
@@ -94,44 +101,107 @@ def main():
         layout="wide",
     )
 
+    # --- Custom CSS ---
+    st.markdown(
+        """
+        <style>
+        /* Hide default Streamlit branding */
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+
+        /* Sidebar styling */
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #006564 0%, #004D4C 100%);
+        }
+        [data-testid="stSidebar"] * {
+            color: #FFFFFF !important;
+        }
+        [data-testid="stSidebar"] a {
+            color: #A8E6CF !important;
+        }
+        [data-testid="stSidebar"] code {
+            color: #A8E6CF !important;
+            background: rgba(255,255,255,0.1) !important;
+        }
+        [data-testid="stSidebar"] hr {
+            border-color: rgba(255,255,255,0.2) !important;
+        }
+
+        /* Main content cards */
+        .stAlert {
+            border-radius: 10px;
+        }
+
+        /* Pipeline summary cards */
+        .pipeline-card {
+            background: #F5F7F8;
+            border-radius: 10px;
+            padding: 16px 20px;
+            border: 1px solid #E0E4E7;
+        }
+        .pipeline-card h4 {
+            color: #006564;
+            margin: 0 0 8px 0;
+            font-size: 0.95rem;
+        }
+        .pipeline-card p {
+            margin: 4px 0;
+            font-size: 0.88rem;
+            color: #555;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # --- Sidebar ---
     with st.sidebar:
-        st.image(
-            "https://upload.wikimedia.org/wikipedia/en/thumb/1/17/Cathay_Pacific_logo.svg/300px-Cathay_Pacific_logo.svg.png",
-            width=200,
+        st.markdown(
+            "<h1 style='font-size: 1.5rem; margin-bottom: 0;'>✈️ Cathay Pacific</h1>"
+            "<p style='font-size: 0.85rem; opacity: 0.8; margin-top: 2px;'>Customer Review Analyzer</p>",
+            unsafe_allow_html=True,
         )
-        st.title("About This App")
+
+        st.markdown("---")
+
         st.markdown(
             """
-            **Cathay Pacific Customer Review Analyzer** uses deep learning to:
+**How it works:**
 
-            1. **Transcribe & translate** audio reviews to English text
-            2. **Analyze sentiment** of the English text
+1. **Translate** your input to English
+2. **Classify** sentiment (5 levels)
 
-            **Architecture:**
-            ```
-            Audio (any lang) → Whisper (translate) → English
-            Text (any lang)  → Opus-MT (translate)  → English
-                                        ↓
-                              Sentiment Analysis → Label
-            ```
+**Architecture:**
+```
+Audio → Whisper (translate) → EN
+Text  → Opus-MT (translate) → EN
+              ↓
+     Sentiment → Label
+```
 
-            **Models Used:**
-            - **Pipeline 1 (ASR):** OpenAI Whisper Medium (`task=translate`)
-            - **Pipeline 2 (Sentiment):** Fine-tuned DistilBERT (English)
-            - **Translation:** Helsinki-NLP/opus-mt-mul-en (for text input)
+**Models:**
+- **ASR:** Whisper Medium (`translate`)
+- **Sentiment:** Fine-tuned DistilBERT
+- **Translation:** opus-mt-mul-en
 
-            **Supported Input Languages:** 99+ (via Whisper & Opus-MT)
-
-            ---
-            *ISOM5240(L1) Group 4*
-
-            *HO, Siu Hung*
-
-            *CHEUNG, Hiu Ling*
+**Languages:** 99+ supported
             """
         )
+
         st.markdown("---")
+
+        st.markdown(
+            """
+*ISOM5240(L1) Group 4*
+
+*HO, Siu Hung*
+
+*CHEUNG, Hiu Ling*
+            """
+        )
+
+        st.markdown("---")
+
         st.markdown(
             "**Links:**\n"
             "- [Cathay Pacific](https://www.cathaypacific.com)\n"
@@ -140,17 +210,18 @@ def main():
         )
 
     # --- Title & Description ---
-    st.title("✈️ Cathay Pacific Customer Review Analyzer")
+    st.markdown(
+        "<h1 style='margin-bottom: 0;'>✈️ Cathay Pacific Customer Review Analyzer</h1>",
+        unsafe_allow_html=True,
+    )
     st.markdown(
         """
-        > This project aims to perform speech-to-text transcription and sentiment analysis
-        > to enhance the understanding of multilingual customer feedback, enabling
-        > data-driven service improvement at **Cathay Pacific**.
-
-        Upload an audio review or type your feedback below in **any language**. The app will:
-        1. **Translate** your input to English (via Whisper for audio, Opus-MT for text)
-        2. **Classify** the sentiment as Very Negative / Negative / Neutral / Positive / Very Positive
-        """
+        <p style='font-size: 1.05rem; color: #555; margin-top: 8px;'>
+        Analyze multilingual customer feedback using deep learning.
+        Upload audio or type text in <strong>any language</strong> — the app translates to English and classifies sentiment.
+        </p>
+        """,
+        unsafe_allow_html=True,
     )
 
     st.markdown("---")
@@ -161,7 +232,7 @@ def main():
         sentiment_pipe = load_sentiment_pipeline()
         translator_tokenizer, translator_model = load_translator()
 
-    st.success("Models loaded successfully!")
+    st.success("All models loaded successfully!")
 
     # --- Input Mode Selection ---
     input_mode = st.radio(
@@ -170,13 +241,14 @@ def main():
         horizontal=True,
     )
 
+    st.markdown("")
+
     # --- Audio Input Mode ---
     if input_mode == "🎤 Upload Audio File":
-        st.markdown("### Upload Audio Review")
         st.info(
             "Upload an audio file of a customer review **in any language**. "
             "Whisper will translate it to English automatically. "
-            "Supported formats: WAV, MP3, FLAC, M4A, OGG"
+            "Supported: WAV, MP3, FLAC, M4A, OGG"
         )
 
         audio_file = st.file_uploader(
@@ -186,16 +258,14 @@ def main():
         )
 
         if audio_file is not None:
-            # Display audio player
             st.audio(audio_file, format=f"audio/{audio_file.type.split('/')[-1]}")
 
             if st.button("🔍 Analyze Review", type="primary", use_container_width=True):
                 # --- Pipeline 1: ASR (translate to English) ---
-                st.markdown("### Step 1: Speech-to-Text (Translate to English)")
+                st.markdown("#### Step 1: Speech-to-Text (Translate to English)")
                 with st.spinner("Transcribing and translating audio to English..."):
                     start_time = time.time()
 
-                    # Save uploaded file temporarily
                     temp_path = f"temp_audio_{audio_file.name}"
                     with open(temp_path, "wb") as f:
                         f.write(audio_file.getbuffer())
@@ -205,49 +275,53 @@ def main():
                         english_text = asr_result["text"]
                         asr_time = time.time() - start_time
                     finally:
-                        # Clean up temp file
                         if os.path.exists(temp_path):
                             os.remove(temp_path)
 
-                st.success(f"Translation completed in {asr_time:.2f} seconds")
-                st.markdown("**English Translation:**")
+                st.success(f"Translated to English in {asr_time:.2f}s")
                 st.text_area(
-                    "Translation",
+                    "English Translation",
                     value=english_text,
                     height=100,
                     disabled=True,
-                    label_visibility="collapsed",
                 )
 
                 # --- Pipeline 2: Sentiment Analysis ---
-                st.markdown("### Step 2: Sentiment Analysis")
+                st.markdown("#### Step 2: Sentiment Analysis")
                 with st.spinner("Analyzing sentiment..."):
                     start_time = time.time()
                     sentiment_result = sentiment_pipe(english_text)
                     sentiment_time = time.time() - start_time
 
-                st.success(f"Sentiment analysis completed in {sentiment_time:.2f} seconds")
                 display_sentiment(sentiment_result)
 
                 # --- Summary ---
                 st.markdown("---")
-                st.markdown("### Pipeline Summary")
+                st.markdown("#### Pipeline Summary")
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.markdown("**Pipeline 1 — ASR + Translation (Whisper Medium)**")
-                    st.markdown(f"- Runtime: {asr_time:.2f}s")
-                    st.markdown(f"- Output: {len(english_text)} characters (English)")
-                with col2:
-                    st.markdown("**Pipeline 2 — Sentiment Analysis (DistilBERT)**")
-                    st.markdown(f"- Runtime: {sentiment_time:.2f}s")
                     st.markdown(
-                        f"- Result: {sentiment_result[0]['label']} "
-                        f"({sentiment_result[0]['score']:.1%})"
+                        '<div class="pipeline-card">'
+                        "<h4>Pipeline 1 — ASR + Translation</h4>"
+                        f"<p>Model: Whisper Medium</p>"
+                        f"<p>Runtime: {asr_time:.2f}s</p>"
+                        f"<p>Output: {len(english_text)} chars (English)</p>"
+                        "</div>",
+                        unsafe_allow_html=True,
+                    )
+                with col2:
+                    st.markdown(
+                        '<div class="pipeline-card">'
+                        "<h4>Pipeline 2 — Sentiment Analysis</h4>"
+                        f"<p>Model: Fine-tuned DistilBERT</p>"
+                        f"<p>Runtime: {sentiment_time:.2f}s</p>"
+                        f"<p>Result: {sentiment_result[0]['label']} ({sentiment_result[0]['score']:.1%})</p>"
+                        "</div>",
+                        unsafe_allow_html=True,
                     )
 
     # --- Text Input Mode ---
     else:
-        st.markdown("### Type Your Review")
         st.info(
             "Type or paste a customer review **in any language**. "
             "Non-English text will be automatically translated to English before analysis."
@@ -269,7 +343,7 @@ def main():
                     detected_lang = "en"
 
                 if detected_lang != "en":
-                    st.markdown("### Step 1: Translation to English")
+                    st.markdown("#### Step 1: Translation to English")
                     with st.spinner(f"Detected language: **{detected_lang}** — Translating to English..."):
                         start_time = time.time()
                         inputs = translator_tokenizer(text_input, return_tensors="pt", max_length=512, truncation=True)
@@ -278,42 +352,60 @@ def main():
                         translate_time = time.time() - start_time
 
                     st.success(f"Translated from **{detected_lang}** to English in {translate_time:.2f}s")
-                    st.markdown("**Original:**")
-                    st.text(text_input)
-                    st.markdown("**English Translation:**")
-                    st.text(english_text)
+
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("**Original:**")
+                        st.text(text_input)
+                    with col2:
+                        st.markdown("**English Translation:**")
+                        st.text(english_text)
                 else:
                     english_text = text_input
                     translate_time = 0
 
                 # --- Sentiment Analysis ---
-                st.markdown("### Sentiment Analysis Result" if detected_lang == "en" else "### Step 2: Sentiment Analysis")
+                step_label = "Sentiment Analysis" if detected_lang == "en" else "Step 2: Sentiment Analysis"
+                st.markdown(f"#### {step_label}")
                 with st.spinner("Analyzing sentiment..."):
                     start_time = time.time()
                     sentiment_result = sentiment_pipe(english_text)
                     sentiment_time = time.time() - start_time
 
-                st.success(
-                    f"Sentiment analysis completed in {sentiment_time:.2f} seconds"
-                )
                 display_sentiment(sentiment_result)
 
                 # --- Summary ---
                 st.markdown("---")
-                st.markdown("### Pipeline Summary")
+                st.markdown("#### Pipeline Summary")
                 if detected_lang != "en":
-                    st.markdown(f"**Translation:** {detected_lang} → English ({translate_time:.2f}s)")
-                st.markdown(f"**Sentiment:** {sentiment_result[0]['label']} ({sentiment_result[0]['score']:.1%}) — {sentiment_time:.2f}s")
+                    st.markdown(
+                        '<div class="pipeline-card">'
+                        f"<h4>Translation</h4>"
+                        f"<p>{detected_lang} → English ({translate_time:.2f}s)</p>"
+                        "</div>",
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown("")
+                st.markdown(
+                    '<div class="pipeline-card">'
+                    f"<h4>Sentiment Analysis</h4>"
+                    f"<p>Result: {sentiment_result[0]['label']} ({sentiment_result[0]['score']:.1%})</p>"
+                    f"<p>Runtime: {sentiment_time:.2f}s</p>"
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
             else:
                 st.warning("Please enter some text to analyze.")
 
     # --- Footer ---
     st.markdown("---")
     st.markdown(
-        "<div style='text-align: center; color: #888;'>"
-        "ISOM5240 Deep Learning Business Applications | HKUST | "
-        "Cathay Pacific Customer Review Analyzer"
-        "</div>",
+        """
+        <div style='text-align: center; padding: 16px 0; color: #999; font-size: 0.85rem;'>
+            ISOM5240(L1) Deep Learning Business Applications | HKUST |
+            Cathay Pacific Customer Review Analyzer
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
