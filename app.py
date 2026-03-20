@@ -33,7 +33,7 @@ def load_translator():
     before passing it to Pipeline 2 (Sentiment). For audio input, Whisper's built-in
     task=translate handles translation directly."""
     return pipeline(
-        "translation",
+        "translation_mul_to_en",
         model="Helsinki-NLP/opus-mt-mul-en",
     )
 
