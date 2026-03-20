@@ -121,7 +121,14 @@ def main():
         }
         [data-testid="stSidebar"] code {
             color: #A8E6CF !important;
-            background: rgba(255,255,255,0.1) !important;
+            background: rgba(255,255,255,0.15) !important;
+        }
+        [data-testid="stSidebar"] pre {
+            background: rgba(0,0,0,0.3) !important;
+            border: none !important;
+        }
+        [data-testid="stSidebar"] pre code {
+            color: #E0F0EF !important;
         }
         [data-testid="stSidebar"] hr {
             border-color: rgba(255,255,255,0.2) !important;
