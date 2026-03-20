@@ -124,8 +124,11 @@ def main():
             **Supported Input Languages:** 99+ (via Whisper & Opus-MT)
 
             ---
-            *ISOM5240 Deep Learning Business Applications*
-            *HKUST — Prof. James Kwok*
+            *ISOM5240(L1) Group 4*
+
+            *HO, Siu Hung*
+
+            *CHEUNG, Hiu Ling*
             """
         )
         st.markdown("---")
