@@ -133,7 +133,7 @@ def main():
             "**Links:**\n"
             "- [Cathay Pacific](https://www.cathaypacific.com)\n"
             "- [HuggingFace Model](https://huggingface.co/tonyho5689/cathay-pacific-sentiment-analysis)\n"
-            "- [GitHub Repo](https://github.com/)\n"
+            "- [GitHub Repo](https://github.com/tonyho5689/cathay-pacific-sentiment-analysis)\n"
         )
 
     # --- Title & Description ---
