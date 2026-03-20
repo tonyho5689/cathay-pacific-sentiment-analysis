@@ -1,5 +1,5 @@
 import streamlit as st
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 from langdetect import detect
 import time
 import os
@@ -32,10 +32,10 @@ def load_translator():
     This is NOT a core pipeline — it simply translates non-English text to English
     before passing it to Pipeline 2 (Sentiment). For audio input, Whisper's built-in
     task=translate handles translation directly."""
-    return pipeline(
-        "translation_mul_to_en",
-        model="Helsinki-NLP/opus-mt-mul-en",
-    )
+    model_name = "Helsinki-NLP/opus-mt-mul-en"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+    return tokenizer, model
 
 
 # --- Sentiment Display Helper ---
@@ -156,7 +156,7 @@ def main():
     with st.spinner("Loading models... This may take a moment on first run."):
         asr_pipe = load_asr_pipeline()
         sentiment_pipe = load_sentiment_pipeline()
-        translator = load_translator()
+        translator_tokenizer, translator_model = load_translator()
 
     st.success("Models loaded successfully!")
 
@@ -269,8 +269,9 @@ def main():
                     st.markdown("### Step 1: Translation to English")
                     with st.spinner(f"Detected language: **{detected_lang}** — Translating to English..."):
                         start_time = time.time()
-                        translation_result = translator(text_input, max_length=512)
-                        english_text = translation_result[0]["translation_text"]
+                        inputs = translator_tokenizer(text_input, return_tensors="pt", max_length=512, truncation=True)
+                        translated = translator_model.generate(**inputs, max_length=512)
+                        english_text = translator_tokenizer.decode(translated[0], skip_special_tokens=True)
                         translate_time = time.time() - start_time
 
                     st.success(f"Translated from **{detected_lang}** to English in {translate_time:.2f}s")
