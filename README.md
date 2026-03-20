@@ -36,7 +36,7 @@ Text (any lang)  → [Opus-MT: translate]        → English Text → [Sentiment
 | Resource | Link |
 |----------|------|
 | Fine-tuned Model | `https://huggingface.co/tonyho5689/cathay-pacific-sentiment-analysis` |
-| Streamlit App | *(update after deployment)* |
+| Streamlit App | `https://cathay-pacific-sentiment-analysis-jxhdwetuymk7g2ftgq7n7e.streamlit.app` |
 | GitHub Repo | `https://github.com/tonyho5689/cathay-pacific-sentiment-analysis` |
 
 ## Setup & Run Locally
