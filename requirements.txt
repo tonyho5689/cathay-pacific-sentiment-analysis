@@ -1,7 +1,5 @@
 streamlit
 transformers
 torch
-torchaudio
-protobuf
 librosa
 soundfile
