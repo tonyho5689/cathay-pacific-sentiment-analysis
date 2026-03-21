@@ -301,7 +301,7 @@ Text  → Opus-MT (translate) → EN
                 st.markdown("#### Step 2: Sentiment Analysis")
                 with st.spinner("Analyzing sentiment..."):
                     start_time = time.time()
-                    sentiment_result = sentiment_pipe(english_text)
+                    sentiment_result = sentiment_pipe(english_text, truncation=True, max_length=512)
                     sentiment_time = time.time() - start_time
 
                 display_sentiment(sentiment_result)
@@ -380,7 +380,7 @@ Text  → Opus-MT (translate) → EN
                 st.markdown(f"#### {step_label}")
                 with st.spinner("Analyzing sentiment..."):
                     start_time = time.time()
-                    sentiment_result = sentiment_pipe(english_text)
+                    sentiment_result = sentiment_pipe(english_text, truncation=True, max_length=512)
                     sentiment_time = time.time() - start_time
 
                 display_sentiment(sentiment_result)
