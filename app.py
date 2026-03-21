@@ -1,6 +1,8 @@
 import streamlit as st
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 from langdetect import detect
+import librosa
+import numpy as np
 import time
 import os
 
@@ -278,7 +280,8 @@ Text  → Opus-MT (translate) → EN
                         f.write(audio_file.getbuffer())
 
                     try:
-                        asr_result = asr_pipe(temp_path)
+                        audio_array, sr = librosa.load(temp_path, sr=16000)
+                        asr_result = asr_pipe({"raw": audio_array, "sampling_rate": sr})
                         english_text = asr_result["text"]
                         asr_time = time.time() - start_time
                     finally:
