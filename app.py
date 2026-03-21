@@ -10,10 +10,11 @@ import os
 # --- Load Models (cached) ---
 @st.cache_resource
 def load_asr_pipeline():
-    """Load Whisper Medium with task=translate (any language audio -> English text)."""
+    """Load Whisper Small with task=translate (any language audio -> English text).
+    Using whisper-small instead of whisper-medium for Streamlit Cloud memory constraints."""
     return pipeline(
         "automatic-speech-recognition",
-        model="openai/whisper-medium",
+        model="openai/whisper-small",
         chunk_length_s=30,
         generate_kwargs={"task": "translate"},
     )
@@ -189,7 +190,7 @@ Text  → Opus-MT (translate) → EN
 ```
 
 **Models:**
-- **ASR:** Whisper Medium (`translate`)
+- **ASR:** Whisper Small (`translate`)
 - **Sentiment:** Fine-tuned DistilBERT
 - **Translation:** opus-mt-mul-en
 
@@ -313,7 +314,7 @@ Text  → Opus-MT (translate) → EN
                     st.markdown(
                         '<div class="pipeline-card">'
                         "<h4>Pipeline 1 — ASR + Translation</h4>"
-                        f"<p>Model: Whisper Medium</p>"
+                        f"<p>Model: Whisper Small</p>"
                         f"<p>Runtime: {asr_time:.2f}s</p>"
                         f"<p>Output: {len(english_text)} chars (English)</p>"
                         "</div>",
