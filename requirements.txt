@@ -2,8 +2,6 @@ streamlit
 transformers
 torch
 torchaudio
-sentencepiece
 protobuf
 librosa
 soundfile
-langdetect

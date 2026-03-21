@@ -1,6 +1,5 @@
 import streamlit as st
-from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
-from langdetect import detect
+from transformers import pipeline
 import librosa
 import numpy as np
 import time
@@ -28,17 +27,6 @@ def load_sentiment_pipeline():
         model="tonyho5689/cathay-pacific-sentiment-analysis",
     )
 
-
-@st.cache_resource
-def load_translator():
-    """Load Helsinki-NLP/opus-mt-mul-en as a pre-processing utility for text input.
-    This is NOT a core pipeline -- it simply translates non-English text to English
-    before passing it to Pipeline 2 (Sentiment). For audio input, Whisper's built-in
-    task=translate handles translation directly."""
-    model_name = "Helsinki-NLP/opus-mt-mul-en"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-    return tokenizer, model
 
 
 # --- Sentiment Display ---
@@ -178,21 +166,22 @@ def main():
             """
 **How it works:**
 
-1. **Translate** your input to English
-2. **Classify** sentiment (5 levels)
+1. **Upload** audio in any language
+2. **Translate** to English (Whisper)
+3. **Classify** sentiment (5 levels)
 
 **Architecture:**
 ```
-Audio → Whisper (translate) → EN
-Text  → Opus-MT (translate) → EN
-              ↓
-     Sentiment → Label
+Audio (any lang)
+      ↓
+Whisper (translate) → EN
+      ↓
+Sentiment → Label
 ```
 
 **Models:**
 - **ASR:** Whisper Small (`translate`)
 - **Sentiment:** Fine-tuned DistilBERT
-- **Translation:** opus-mt-mul-en
 
 **Languages:** 99+ supported
             """
@@ -228,7 +217,7 @@ Text  → Opus-MT (translate) → EN
         """
         <p style='font-size: 1.05rem; color: #555; margin-top: 8px;'>
         Analyze multilingual customer feedback using deep learning.
-        Upload audio or type text in <strong>any language</strong> — the app translates to English and classifies sentiment.
+        Upload audio <strong>in any language</strong> — the app translates to English and classifies sentiment.
         </p>
         """,
         unsafe_allow_html=True,
@@ -240,173 +229,85 @@ Text  → Opus-MT (translate) → EN
     with st.spinner("Loading models... This may take a moment on first run."):
         asr_pipe = load_asr_pipeline()
         sentiment_pipe = load_sentiment_pipeline()
-        translator_tokenizer, translator_model = load_translator()
 
     st.success("All models loaded successfully!")
 
-    # --- Input Mode Selection ---
-    input_mode = st.radio(
-        "Choose input method:",
-        ["🎤 Upload Audio File", "⌨️ Type Text Directly"],
-        horizontal=True,
+    # --- Audio Input ---
+    st.info(
+        "Upload an audio file of a customer review **in any language**. "
+        "Whisper will translate it to English automatically. "
+        "Supported: WAV, MP3, FLAC, M4A, OGG"
     )
 
-    st.markdown("")
+    audio_file = st.file_uploader(
+        "Choose an audio file",
+        type=["wav", "mp3", "flac", "m4a", "ogg"],
+        help="Upload a customer review audio recording in any language",
+    )
 
-    # --- Audio Input Mode ---
-    if input_mode == "🎤 Upload Audio File":
-        st.info(
-            "Upload an audio file of a customer review **in any language**. "
-            "Whisper will translate it to English automatically. "
-            "Supported: WAV, MP3, FLAC, M4A, OGG"
-        )
+    if audio_file is not None:
+        st.audio(audio_file, format=f"audio/{audio_file.type.split('/')[-1]}")
 
-        audio_file = st.file_uploader(
-            "Choose an audio file",
-            type=["wav", "mp3", "flac", "m4a", "ogg"],
-            help="Upload a customer review audio recording in any language",
-        )
+        if st.button("🔍 Analyze Review", type="primary", use_container_width=True):
+            # --- Pipeline 1: ASR (translate to English) ---
+            st.markdown("#### Step 1: Speech-to-Text (Translate to English)")
+            with st.spinner("Transcribing and translating audio to English..."):
+                start_time = time.time()
 
-        if audio_file is not None:
-            st.audio(audio_file, format=f"audio/{audio_file.type.split('/')[-1]}")
+                temp_path = f"temp_audio_{audio_file.name}"
+                with open(temp_path, "wb") as f:
+                    f.write(audio_file.getbuffer())
 
-            if st.button("🔍 Analyze Review", type="primary", use_container_width=True):
-                # --- Pipeline 1: ASR (translate to English) ---
-                st.markdown("#### Step 1: Speech-to-Text (Translate to English)")
-                with st.spinner("Transcribing and translating audio to English..."):
-                    start_time = time.time()
-
-                    temp_path = f"temp_audio_{audio_file.name}"
-                    with open(temp_path, "wb") as f:
-                        f.write(audio_file.getbuffer())
-
-                    try:
-                        audio_array, sr = librosa.load(temp_path, sr=16000)
-                        asr_result = asr_pipe({"raw": audio_array, "sampling_rate": sr})
-                        english_text = asr_result["text"]
-                        asr_time = time.time() - start_time
-                    finally:
-                        if os.path.exists(temp_path):
-                            os.remove(temp_path)
-
-                st.success(f"Translated to English in {asr_time:.2f}s")
-                st.text_area(
-                    "English Translation",
-                    value=english_text,
-                    height=100,
-                    disabled=True,
-                )
-
-                # --- Pipeline 2: Sentiment Analysis ---
-                st.markdown("#### Step 2: Sentiment Analysis")
-                with st.spinner("Analyzing sentiment..."):
-                    start_time = time.time()
-                    sentiment_result = sentiment_pipe(english_text, truncation=True, max_length=512)
-                    sentiment_time = time.time() - start_time
-
-                display_sentiment(sentiment_result)
-
-                # --- Summary ---
-                st.markdown("---")
-                st.markdown("#### Pipeline Summary")
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown(
-                        '<div class="pipeline-card">'
-                        "<h4>Pipeline 1 — ASR + Translation</h4>"
-                        f"<p>Model: Whisper Small</p>"
-                        f"<p>Runtime: {asr_time:.2f}s</p>"
-                        f"<p>Output: {len(english_text)} chars (English)</p>"
-                        "</div>",
-                        unsafe_allow_html=True,
-                    )
-                with col2:
-                    st.markdown(
-                        '<div class="pipeline-card">'
-                        "<h4>Pipeline 2 — Sentiment Analysis</h4>"
-                        f"<p>Model: Fine-tuned DistilBERT</p>"
-                        f"<p>Runtime: {sentiment_time:.2f}s</p>"
-                        f"<p>Result: {sentiment_result[0]['label']} ({sentiment_result[0]['score']:.1%})</p>"
-                        "</div>",
-                        unsafe_allow_html=True,
-                    )
-
-    # --- Text Input Mode ---
-    else:
-        st.info(
-            "Type or paste a customer review **in any language**. "
-            "Non-English text will be automatically translated to English before analysis."
-        )
-
-        text_input = st.text_area(
-            "Enter review text",
-            placeholder="e.g., The flight was excellent! The cabin crew was very friendly. "
-            "/ 航班非常好，机组人员很友善。 / フライトは素晴らしかったです。",
-            height=150,
-        )
-
-        if st.button("🔍 Analyze Sentiment", type="primary", use_container_width=True):
-            if text_input.strip():
-                # --- Detect language and translate if needed ---
                 try:
-                    detected_lang = detect(text_input)
-                except Exception:
-                    detected_lang = "en"
+                    audio_array, sr = librosa.load(temp_path, sr=16000)
+                    asr_result = asr_pipe({"raw": audio_array, "sampling_rate": sr})
+                    english_text = asr_result["text"]
+                    asr_time = time.time() - start_time
+                finally:
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
 
-                if detected_lang != "en":
-                    st.markdown("#### Step 1: Translation to English")
-                    with st.spinner(f"Detected language: **{detected_lang}** — Translating to English..."):
-                        start_time = time.time()
-                        inputs = translator_tokenizer(text_input, return_tensors="pt", max_length=512, truncation=True)
-                        translated = translator_model.generate(**inputs, max_length=512)
-                        english_text = translator_tokenizer.decode(translated[0], skip_special_tokens=True)
-                        translate_time = time.time() - start_time
+            st.success(f"Translated to English in {asr_time:.2f}s")
+            st.text_area(
+                "English Translation",
+                value=english_text,
+                height=100,
+                disabled=True,
+            )
 
-                    st.success(f"Translated from **{detected_lang}** to English in {translate_time:.2f}s")
+            # --- Pipeline 2: Sentiment Analysis ---
+            st.markdown("#### Step 2: Sentiment Analysis")
+            with st.spinner("Analyzing sentiment..."):
+                start_time = time.time()
+                sentiment_result = sentiment_pipe(english_text, truncation=True, max_length=512)
+                sentiment_time = time.time() - start_time
 
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.markdown("**Original:**")
-                        st.text(text_input)
-                    with col2:
-                        st.markdown("**English Translation:**")
-                        st.text(english_text)
-                else:
-                    english_text = text_input
-                    translate_time = 0
+            display_sentiment(sentiment_result)
 
-                # --- Sentiment Analysis ---
-                step_label = "Sentiment Analysis" if detected_lang == "en" else "Step 2: Sentiment Analysis"
-                st.markdown(f"#### {step_label}")
-                with st.spinner("Analyzing sentiment..."):
-                    start_time = time.time()
-                    sentiment_result = sentiment_pipe(english_text, truncation=True, max_length=512)
-                    sentiment_time = time.time() - start_time
-
-                display_sentiment(sentiment_result)
-
-                # --- Summary ---
-                st.markdown("---")
-                st.markdown("#### Pipeline Summary")
-                if detected_lang != "en":
-                    st.markdown(
-                        '<div class="pipeline-card">'
-                        f"<h4>Translation</h4>"
-                        f"<p>{detected_lang} → English ({translate_time:.2f}s)</p>"
-                        "</div>",
-                        unsafe_allow_html=True,
-                    )
-                    st.markdown("")
+            # --- Summary ---
+            st.markdown("---")
+            st.markdown("#### Pipeline Summary")
+            col1, col2 = st.columns(2)
+            with col1:
                 st.markdown(
                     '<div class="pipeline-card">'
-                    f"<h4>Sentiment Analysis</h4>"
-                    f"<p>Result: {sentiment_result[0]['label']} ({sentiment_result[0]['score']:.1%})</p>"
-                    f"<p>Runtime: {sentiment_time:.2f}s</p>"
+                    "<h4>Pipeline 1 — ASR + Translation</h4>"
+                    f"<p>Model: Whisper Small</p>"
+                    f"<p>Runtime: {asr_time:.2f}s</p>"
+                    f"<p>Output: {len(english_text)} chars (English)</p>"
                     "</div>",
                     unsafe_allow_html=True,
                 )
-            else:
-                st.warning("Please enter some text to analyze.")
+            with col2:
+                st.markdown(
+                    '<div class="pipeline-card">'
+                    "<h4>Pipeline 2 — Sentiment Analysis</h4>"
+                    f"<p>Model: Fine-tuned DistilBERT</p>"
+                    f"<p>Runtime: {sentiment_time:.2f}s</p>"
+                    f"<p>Result: {sentiment_result[0]['label']} ({sentiment_result[0]['score']:.1%})</p>"
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
 
     # --- Footer ---
     st.markdown("---")
