@@ -311,15 +311,6 @@ Sentiment → Label
 
     # --- Footer ---
     st.markdown("---")
-    st.markdown(
-        """
-        <div style='text-align: center; padding: 16px 0; color: #999; font-size: 0.85rem;'>
-            ISOM5240(L1) Deep Learning Business Applications | HKUST |
-            Cathay Pacific Customer Review Analyzer
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
 
 if __name__ == "__main__":
