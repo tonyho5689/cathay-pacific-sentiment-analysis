@@ -31,11 +31,9 @@ def load_sentiment_pipeline():
 
 # --- Sentiment Display ---
 SENTIMENT_CONFIG = {
-    "Very Negative": {"color": "#DC3545", "emoji": "😡", "bg": "#FDE8EA"},
-    "Negative":      {"color": "#E67E22", "emoji": "😞", "bg": "#FDF0E6"},
-    "Neutral":       {"color": "#F5B041", "emoji": "😐", "bg": "#FEF7E8"},
-    "Positive":      {"color": "#27AE60", "emoji": "🙂", "bg": "#E8F8EF"},
-    "Very Positive": {"color": "#006564", "emoji": "😄", "bg": "#E6F2F2"},
+    "Negative": {"color": "#DC3545", "emoji": "😞", "bg": "#FDE8EA"},
+    "Neutral":  {"color": "#F5B041", "emoji": "😐", "bg": "#FEF7E8"},
+    "Positive": {"color": "#27AE60", "emoji": "🙂", "bg": "#E8F8EF"},
 }
 
 
@@ -168,7 +166,7 @@ def main():
 
 1. **Upload** audio in any language
 2. **Translate** to English (Whisper)
-3. **Classify** sentiment (5 levels)
+3. **Classify** sentiment (3 levels)
 
 **Architecture:**
 ```

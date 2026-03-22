@@ -8,26 +8,22 @@
 
 ## Architecture
 
-All input (audio or text) is **translated to English first**, then analyzed for sentiment:
+All audio input is **translated to English first**, then analyzed for sentiment:
 
 ```
-Audio (any lang) → [Whisper Medium: translate] → English Text → [Sentiment Model] → Label
-Text (any lang)  → [Opus-MT: translate]        → English Text → [Sentiment Model] → Label
+Audio (any lang) → [Whisper Small: translate] → English Text → [Sentiment Model] → Label
 ```
 
 | Pipeline | Task | Model | Fine-Tuned? |
 |----------|------|-------|-------------|
-| Pipeline 1 (ASR) | Speech → English Text | `openai/whisper-medium` (`task=translate`) | No (pre-trained) |
+| Pipeline 1 (ASR) | Speech → English Text | `openai/whisper-small` (`task=translate`) | No (pre-trained) |
 | Pipeline 2 (Sentiment) | English Text → Sentiment | `tonyho5689/cathay-pacific-sentiment-analysis` | Yes (on English airline reviews) |
-
-> **Note on Translation Utility:** The app also uses `Helsinki-NLP/opus-mt-mul-en` as a **pre-processing utility** for the text input path. It is not a core pipeline — it simply translates non-English text input to English before passing it to Pipeline 2. For audio input, Whisper's built-in `task=translate` handles translation directly. This utility is not fine-tuned or evaluated in the experiments, as it serves only as a convenience layer for the app's text input mode.
 
 ## Features
 
-- Multilingual support (99+ languages via Whisper & Opus-MT translation)
+- Multilingual support (99+ languages via Whisper translation)
 - Audio file upload (WAV, MP3, FLAC, M4A, OGG) — auto-translated to English
-- Direct text input — auto-detected and translated if non-English
-- 5-class sentiment classification (Very Negative → Very Positive)
+- 3-class sentiment classification (Negative / Neutral / Positive)
 - Real-time transcription, translation, and analysis
 - Color-coded sentiment visualization
 
@@ -76,26 +72,25 @@ streamlit run app.py
 
 | Model | Params | Accuracy | F1 Score | Training Time | Inference Time | Selected? |
 |-------|--------|----------|----------|---------------|----------------|-----------|
-| `tabularisai/multilingual-sentiment-analysis` | 135M | **81.4%** | **0.8135** | 453s | 2.75s | ✓ |
-| `xlm-roberta-base` | 278M | 79.4% | 0.7922 | 908s | 4.63s | |
-| `bert-base-multilingual-cased` | 178M | 78.6% | 0.7857 | 775s | 4.95s | |
+| `tabularisai/multilingual-sentiment-analysis` | 135M | **82.1%** | **0.8222** | 31s | 1.37s | ✓ |
+| `xlm-roberta-base` | 278M | 82.7% | 0.8275 | 67s | 1.83s | |
+| `bert-base-multilingual-cased` | 178M | 80.6% | 0.8080 | 53s | 1.78s | |
 
 ## Dataset
 
-- **Sentiment Fine-tuning:** Skytrax Airline Reviews (Kaggle, ~8K English reviews with 1-10 star ratings → 5 classes)
+- **Sentiment Fine-tuning:** Skytrax Airline Reviews (Kaggle, ~8K English reviews with 1-10 star ratings → 3 classes)
 - **English only** — no multilingual supplement needed since all input is translated to English first
 - **ASR Evaluation:** FLEURS (Google) — 50 English + 50 Chinese audio samples
-- **Balancing:** Oversampling to equalize all 5 sentiment classes
+- **Balancing:** Hybrid — undersample large classes + oversample small class to ~2,000 each
 
 ## Tech Stack
 
 | Component | Technology |
 |-----------|-----------|
 | Models | HuggingFace Transformers |
-| ASR + Translation | OpenAI Whisper Medium (`task=translate`) |
-| Text Translation | Helsinki-NLP/opus-mt-mul-en |
+| ASR + Translation | OpenAI Whisper Small (`task=translate`) |
 | Sentiment | Fine-tuned DistilBERT |
-| Fine-Tuning | Google Colab (T4 GPU) |
+| Fine-Tuning | Google Colab (A100 GPU) |
 | App Framework | Streamlit |
 | Deployment | Streamlit Cloud |
 | Languages | Python |
