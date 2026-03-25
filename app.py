@@ -292,30 +292,12 @@ Sentiment → Label
     # Track uploader key for clear button
     if "uploader_key" not in st.session_state:
         st.session_state.uploader_key = 0
-    if "prev_file_names" not in st.session_state:
-        st.session_state.prev_file_names = set()
-
-    def _on_upload_change():
-        """Always clear previous files when new files are uploaded/dragged."""
-        key = f"audio_uploader_{st.session_state.uploader_key}"
-        files = st.session_state.get(key, [])
-        new_names = {f.name for f in files} if files else set()
-        old_names = st.session_state.prev_file_names
-
-        if old_names and new_names and new_names != old_names:
-            # Any change in file set → reset uploader to clear old files, then re-upload
-            st.session_state.uploader_key += 1
-            st.session_state.prev_file_names = set()
-        else:
-            st.session_state.prev_file_names = new_names
-
     audio_files = st.file_uploader(
         "Choose audio file(s)",
         type=["wav", "mp3", "flac", "m4a", "ogg"],
         accept_multiple_files=True,
         help="Upload one or more customer review audio recordings in any language",
         key=f"audio_uploader_{st.session_state.uploader_key}",
-        on_change=_on_upload_change,
     )
 
     if audio_files:
@@ -327,7 +309,6 @@ Sentiment → Label
         with col_clear:
             if st.button("🗑️ Clear Files", use_container_width=True):
                 st.session_state.uploader_key += 1
-                st.session_state.prev_file_names = set()
                 st.rerun()
         button_label = f"🔍 Analyze {len(audio_files)} Review(s)" if len(audio_files) > 1 else "🔍 Analyze Review"
         with col_analyze:
