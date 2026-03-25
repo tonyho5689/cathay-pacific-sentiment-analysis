@@ -248,28 +248,37 @@ Sentiment → Label
 
     # --- Generate Sample Audio ---
     with st.expander("🎙️ Generate Sample Audio for Testing"):
-        st.markdown("Select a sample airline review and generate an audio file to test the analyzer.")
-        selected = st.selectbox("Choose a sample review:", list(SAMPLE_REVIEWS.keys()))
-        review_text = SAMPLE_REVIEWS[selected]
-        st.text_area("Review text:", value=review_text, height=80, disabled=True)
+        st.markdown("Type your own review or select a preset sample, then generate an audio file to test the analyzer.")
+
+        input_mode = st.radio("Input mode:", ["Write my own", "Choose a preset sample"], horizontal=True)
+
+        if input_mode == "Write my own":
+            review_text = st.text_area("Type your airline review:", height=100, placeholder="e.g. The flight was amazing, the crew was very friendly and helpful...")
+        else:
+            selected = st.selectbox("Choose a sample review:", list(SAMPLE_REVIEWS.keys()))
+            review_text = SAMPLE_REVIEWS[selected]
+            st.text_area("Review text:", value=review_text, height=80, disabled=True)
 
         if st.button("🔊 Generate Audio", use_container_width=True):
-            with st.spinner("Generating audio..."):
-                tts = gTTS(text=review_text, lang="en", slow=False)
-                audio_buffer = io.BytesIO()
-                tts.write_to_fp(audio_buffer)
-                audio_buffer.seek(0)
+            if not review_text or not review_text.strip():
+                st.warning("Please enter some text first.")
+            else:
+                with st.spinner("Generating audio..."):
+                    tts = gTTS(text=review_text.strip(), lang="en", slow=False)
+                    audio_buffer = io.BytesIO()
+                    tts.write_to_fp(audio_buffer)
+                    audio_buffer.seek(0)
 
-            st.audio(audio_buffer, format="audio/mp3")
-            audio_buffer.seek(0)
-            st.download_button(
-                label="⬇️ Download MP3",
-                data=audio_buffer,
-                file_name="sample_review.mp3",
-                mime="audio/mpeg",
-                use_container_width=True,
-            )
-            st.markdown("*Download the file above, then upload it below to analyze.*")
+                st.audio(audio_buffer, format="audio/mp3")
+                audio_buffer.seek(0)
+                st.download_button(
+                    label="⬇️ Download MP3",
+                    data=audio_buffer,
+                    file_name="sample_review.mp3",
+                    mime="audio/mpeg",
+                    use_container_width=True,
+                )
+                st.markdown("*Download the file above, then upload it below to analyze.*")
 
     st.markdown("---")
 
