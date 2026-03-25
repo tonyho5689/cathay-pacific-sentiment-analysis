@@ -3,4 +3,4 @@ transformers
 torch
 librosa
 soundfile
-gTTS
+gtts
