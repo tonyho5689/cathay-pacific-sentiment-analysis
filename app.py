@@ -1,9 +1,11 @@
 import streamlit as st
 from transformers import pipeline
+from gtts import gTTS
 import librosa
 import numpy as np
 import time
 import os
+import io
 
 
 # --- Load Models (cached) ---
@@ -34,6 +36,20 @@ SENTIMENT_CONFIG = {
     "Negative": {"color": "#DC3545", "emoji": "😞", "bg": "#FDE8EA"},
     "Neutral":  {"color": "#F5B041", "emoji": "😐", "bg": "#FEF7E8"},
     "Positive": {"color": "#27AE60", "emoji": "🙂", "bg": "#E8F8EF"},
+}
+
+
+SAMPLE_REVIEWS = {
+    "Negative — Flight delay complaint": "I am extremely disappointed with Cathay Pacific. My flight was delayed by six hours and nobody gave us any information. The staff at the gate were rude and unhelpful.",
+    "Negative — Lost luggage": "My luggage was lost and it took five days to get it back. Customer service kept transferring me to different departments and nobody took responsibility.",
+    "Negative — Poor cabin experience": "The worst flying experience I have ever had. The seat was broken, the entertainment system did not work, and the food was cold and tasteless.",
+    "Neutral — Average flight": "The flight was okay overall. Nothing special but nothing terrible either. The seats were average and the food was decent.",
+    "Neutral — Standard economy": "It was a standard economy experience. The check-in was smooth but the legroom was a bit tight. The cabin crew did their job. Just an ordinary flight.",
+    "Neutral — Mixed experience": "The flight departed on time which was good, but the meal options were limited. Some things were good, some things could be better.",
+    "Positive — Business class": "What an amazing experience flying business class with Cathay Pacific! The lounge was beautiful, the food was restaurant quality, and the flat bed seat was so comfortable.",
+    "Positive — Great crew": "I want to thank the wonderful cabin crew on my flight. They were attentive, kind, and went out of their way to help with my special meal request. Outstanding service!",
+    "Positive — Loyal customer": "Cathay Pacific is my favorite airline. Every time I fly with them the experience is consistently excellent. Clean aircraft, friendly staff, and great entertainment.",
+    "Positive — Smooth journey": "Had a wonderful flight from Hong Kong to London. Everything was perfect from check-in to landing. The crew made sure every passenger was comfortable throughout the journey.",
 }
 
 
@@ -229,6 +245,33 @@ Sentiment → Label
         sentiment_pipe = load_sentiment_pipeline()
 
     st.success("All models loaded successfully!")
+
+    # --- Generate Sample Audio ---
+    with st.expander("🎙️ Generate Sample Audio for Testing"):
+        st.markdown("Select a sample airline review and generate an audio file to test the analyzer.")
+        selected = st.selectbox("Choose a sample review:", list(SAMPLE_REVIEWS.keys()))
+        review_text = SAMPLE_REVIEWS[selected]
+        st.text_area("Review text:", value=review_text, height=80, disabled=True)
+
+        if st.button("🔊 Generate Audio", use_container_width=True):
+            with st.spinner("Generating audio..."):
+                tts = gTTS(text=review_text, lang="en", slow=False)
+                audio_buffer = io.BytesIO()
+                tts.write_to_fp(audio_buffer)
+                audio_buffer.seek(0)
+
+            st.audio(audio_buffer, format="audio/mp3")
+            audio_buffer.seek(0)
+            st.download_button(
+                label="⬇️ Download MP3",
+                data=audio_buffer,
+                file_name="sample_review.mp3",
+                mime="audio/mpeg",
+                use_container_width=True,
+            )
+            st.markdown("*Download the file above, then upload it below to analyze.*")
+
+    st.markdown("---")
 
     # --- Audio Input ---
     st.info(
