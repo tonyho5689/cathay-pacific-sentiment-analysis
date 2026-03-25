@@ -286,7 +286,9 @@ Sentiment → Label
     st.info(
         "Upload one or more audio files of customer reviews **in any language**. "
         "Whisper will translate them to English automatically. "
-        "Supported: WAV, MP3, FLAC, M4A, OGG"
+        "Supported: WAV, MP3, FLAC, M4A, OGG\n\n"
+        "💡 **Tips:** For best results, keep each audio to **15–30 seconds**. "
+        "Please **Clear Files** before uploading a new batch to avoid exceeding app memory."
     )
 
     # Track uploader key for clear button
