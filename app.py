@@ -289,11 +289,16 @@ Sentiment → Label
         "Supported: WAV, MP3, FLAC, M4A, OGG"
     )
 
+    # Track uploader key for clear button
+    if "uploader_key" not in st.session_state:
+        st.session_state.uploader_key = 0
+
     audio_files = st.file_uploader(
         "Choose audio file(s)",
         type=["wav", "mp3", "flac", "m4a", "ogg"],
         accept_multiple_files=True,
         help="Upload one or more customer review audio recordings in any language",
+        key=f"audio_uploader_{st.session_state.uploader_key}",
     )
 
     if audio_files:
@@ -301,8 +306,15 @@ Sentiment → Label
         for af in audio_files:
             st.audio(af, format=f"audio/{af.type.split('/')[-1]}")
 
+        col_analyze, col_clear = st.columns([3, 1])
+        with col_clear:
+            if st.button("🗑️ Clear Files", use_container_width=True):
+                st.session_state.uploader_key += 1
+                st.rerun()
         button_label = f"🔍 Analyze {len(audio_files)} Review(s)" if len(audio_files) > 1 else "🔍 Analyze Review"
-        if st.button(button_label, type="primary", use_container_width=True):
+        with col_analyze:
+            analyze_clicked = st.button(button_label, type="primary", use_container_width=True)
+        if analyze_clicked:
             all_results = []
             progress_bar = st.progress(0, text="Processing audio files...")
 
