@@ -296,14 +296,14 @@ Sentiment → Label
         st.session_state.prev_file_names = set()
 
     def _on_upload_change():
-        """Auto-clear previous files when new files are dragged/uploaded to prevent accumulation."""
+        """Always clear previous files when new files are uploaded/dragged."""
         key = f"audio_uploader_{st.session_state.uploader_key}"
         files = st.session_state.get(key, [])
         new_names = {f.name for f in files} if files else set()
         old_names = st.session_state.prev_file_names
 
-        if old_names and new_names and old_names.issubset(new_names) and new_names != old_names:
-            # Old files still present + new files added = drag accumulation → reset uploader
+        if old_names and new_names and new_names != old_names:
+            # Any change in file set → reset uploader to clear old files, then re-upload
             st.session_state.uploader_key += 1
             st.session_state.prev_file_names = set()
         else:
