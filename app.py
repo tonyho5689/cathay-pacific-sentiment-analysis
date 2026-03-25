@@ -284,31 +284,38 @@ Sentiment → Label
 
     # --- Audio Input ---
     st.info(
-        "Upload an audio file of a customer review **in any language**. "
-        "Whisper will translate it to English automatically. "
+        "Upload one or more audio files of customer reviews **in any language**. "
+        "Whisper will translate them to English automatically. "
         "Supported: WAV, MP3, FLAC, M4A, OGG"
     )
 
-    audio_file = st.file_uploader(
-        "Choose an audio file",
+    audio_files = st.file_uploader(
+        "Choose audio file(s)",
         type=["wav", "mp3", "flac", "m4a", "ogg"],
-        help="Upload a customer review audio recording in any language",
+        accept_multiple_files=True,
+        help="Upload one or more customer review audio recordings in any language",
     )
 
-    if audio_file is not None:
-        st.audio(audio_file, format=f"audio/{audio_file.type.split('/')[-1]}")
+    if audio_files:
+        # Preview uploaded files
+        for af in audio_files:
+            st.audio(af, format=f"audio/{af.type.split('/')[-1]}")
 
-        if st.button("🔍 Analyze Review", type="primary", use_container_width=True):
-            # --- Pipeline 1: ASR (translate to English) ---
-            st.markdown("#### Step 1: Speech-to-Text (Translate to English)")
-            with st.spinner("Transcribing and translating audio to English..."):
-                start_time = time.time()
+        button_label = f"🔍 Analyze {len(audio_files)} Review(s)" if len(audio_files) > 1 else "🔍 Analyze Review"
+        if st.button(button_label, type="primary", use_container_width=True):
+            all_results = []
+            progress_bar = st.progress(0, text="Processing audio files...")
 
+            for i, audio_file in enumerate(audio_files):
+                progress_bar.progress((i) / len(audio_files), text=f"Processing {audio_file.name} ({i+1}/{len(audio_files)})...")
+
+                # --- Pipeline 1: ASR ---
                 temp_path = f"temp_audio_{audio_file.name}"
                 with open(temp_path, "wb") as f:
                     f.write(audio_file.getbuffer())
 
                 try:
+                    start_time = time.time()
                     audio_array, sr = librosa.load(temp_path, sr=16000)
                     asr_result = asr_pipe({"raw": audio_array, "sampling_rate": sr})
                     english_text = asr_result["text"]
@@ -317,47 +324,63 @@ Sentiment → Label
                     if os.path.exists(temp_path):
                         os.remove(temp_path)
 
-            st.success(f"Translated to English in {asr_time:.2f}s")
-            st.text_area(
-                "English Translation",
-                value=english_text,
-                height=100,
-                disabled=True,
-            )
-
-            # --- Pipeline 2: Sentiment Analysis ---
-            st.markdown("#### Step 2: Sentiment Analysis")
-            with st.spinner("Analyzing sentiment..."):
+                # --- Pipeline 2: Sentiment ---
                 start_time = time.time()
                 sentiment_result = sentiment_pipe(english_text, truncation=True, max_length=512)
                 sentiment_time = time.time() - start_time
 
-            display_sentiment(sentiment_result)
+                label = sentiment_result[0]["label"]
+                score = sentiment_result[0]["score"]
 
-            # --- Summary ---
-            st.markdown("---")
-            st.markdown("#### Pipeline Summary")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown(
-                    '<div class="pipeline-card">'
-                    "<h4>Pipeline 1 — ASR + Translation</h4>"
-                    f"<p>Model: Whisper Small</p>"
-                    f"<p>Runtime: {asr_time:.2f}s</p>"
-                    f"<p>Output: {len(english_text)} chars (English)</p>"
-                    "</div>",
-                    unsafe_allow_html=True,
-                )
-            with col2:
-                st.markdown(
-                    '<div class="pipeline-card">'
-                    "<h4>Pipeline 2 — Sentiment Analysis</h4>"
-                    f"<p>Model: Fine-tuned DistilBERT</p>"
-                    f"<p>Runtime: {sentiment_time:.2f}s</p>"
-                    f"<p>Result: {sentiment_result[0]['label']} ({sentiment_result[0]['score']:.1%})</p>"
-                    "</div>",
-                    unsafe_allow_html=True,
-                )
+                all_results.append({
+                    "File": audio_file.name,
+                    "Transcription": english_text,
+                    "Sentiment": label,
+                    "Confidence": f"{score:.1%}",
+                    "ASR Time (s)": f"{asr_time:.2f}",
+                    "Sentiment Time (s)": f"{sentiment_time:.2f}",
+                })
+
+                # --- Per-file result in expander ---
+                with st.expander(f"Result: {audio_file.name}", expanded=(len(audio_files) == 1)):
+                    st.markdown("**Step 1: Speech-to-Text (Translate to English)**")
+                    st.success(f"Translated to English in {asr_time:.2f}s")
+                    st.text_area("English Translation", value=english_text, height=80, disabled=True, key=f"trans_{i}")
+
+                    st.markdown("**Step 2: Sentiment Analysis**")
+                    display_sentiment(sentiment_result)
+
+                    st.markdown("**Pipeline Summary**")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown(
+                            '<div class="pipeline-card">'
+                            "<h4>Pipeline 1 — ASR + Translation</h4>"
+                            f"<p>Model: Whisper Small</p>"
+                            f"<p>Runtime: {asr_time:.2f}s</p>"
+                            f"<p>Output: {len(english_text)} chars (English)</p>"
+                            "</div>",
+                            unsafe_allow_html=True,
+                        )
+                    with col2:
+                        st.markdown(
+                            '<div class="pipeline-card">'
+                            "<h4>Pipeline 2 — Sentiment Analysis</h4>"
+                            f"<p>Model: Fine-tuned DistilBERT</p>"
+                            f"<p>Runtime: {sentiment_time:.2f}s</p>"
+                            f"<p>Result: {label} ({score:.1%})</p>"
+                            "</div>",
+                            unsafe_allow_html=True,
+                        )
+
+            progress_bar.progress(1.0, text="All files processed!")
+
+            # --- Overall Batch Summary ---
+            if len(all_results) > 1:
+                st.markdown("---")
+                st.markdown("#### Batch Summary")
+                import pandas as pd
+                st.dataframe(pd.DataFrame(all_results), use_container_width=True, hide_index=True)
 
     # --- Footer ---
     st.markdown("---")
