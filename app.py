@@ -205,12 +205,10 @@ Sentiment → Label
 
         st.markdown(
             """
-*ISOM5240(L1) Group 4*
+*ISOM5240(L1)*
 
 *HO, Siu Hung*
-
-*CHEUNG, Hiu Ling*
-            """
+"""
         )
 
         st.markdown("---")
