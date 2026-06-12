@@ -1,0 +1,30 @@
+name: Keep Streamlit App Awake
+
+# Streamlit Community Cloud puts apps to sleep after a period of inactivity.
+# This workflow sends a lightweight HTTP request to the app on a schedule so
+# that the inactivity timer keeps resetting and the app stays awake.
+
+on:
+  schedule:
+    # Every 10 minutes. GitHub may throttle/delay scheduled runs under load,
+    # which is fine — even an occasional ping every 30+ min keeps the app awake.
+    - cron: "*/10 * * * *"
+  # Allow manual triggering from the Actions tab for testing.
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the Streamlit app
+        run: |
+          URL="https://cathay-pacific-sentiment-analysis-jxhdwetuymk7g2ftgq7n7e.streamlit.app"
+          echo "Pinging $URL"
+          STATUS=$(curl -sS -o /dev/null -w "%{http_code}" -L --max-time 60 "$URL")
+          echo "HTTP status: $STATUS"
+          # Treat any response from the server as success — the goal is traffic,
+          # not a specific status code.
+          if [ -z "$STATUS" ] || [ "$STATUS" = "000" ]; then
+            echo "No response from app (connection failed)."
+            exit 1
+          fi

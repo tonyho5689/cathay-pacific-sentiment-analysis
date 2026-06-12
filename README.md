@@ -35,6 +35,20 @@ Audio (any lang) → [Whisper Small: translate] → English Text → [Sentiment 
 | Streamlit App | `https://cathay-pacific-sentiment-analysis-jxhdwetuymk7g2ftgq7n7e.streamlit.app` |
 | GitHub Repo | `https://github.com/tonyho5689/cathay-pacific-sentiment-analysis` |
 
+## Keeping the App Awake
+
+Streamlit Community Cloud puts apps to sleep after a period of inactivity. A
+GitHub Actions workflow ([`.github/workflows/keep-alive.yml`](.github/workflows/keep-alive.yml))
+pings the app every ~10 minutes on a schedule so it stays awake — no third-party
+service or secrets required.
+
+Notes:
+- Scheduled workflows are **disabled automatically after 60 days of no repo
+  activity**; any commit (or manually re-enabling in the Actions tab) resumes them.
+- You can trigger a ping manually from the **Actions → Keep Streamlit App Awake →
+  Run workflow** button.
+- If the app URL changes, update the `URL` value in the workflow file.
+
 ## Setup & Run Locally
 
 ```bash
