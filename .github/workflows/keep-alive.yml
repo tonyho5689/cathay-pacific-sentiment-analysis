@@ -18,13 +18,23 @@ jobs:
     steps:
       - name: Ping the Streamlit app
         run: |
-          URL="https://cathay-pacific-sentiment-analysis-jxhdwetuymk7g2ftgq7n7e.streamlit.app"
+          # Don't abort on curl's non-zero exit — we inspect the result ourselves.
+          set +e
+          BASE="https://cathay-pacific-sentiment-analysis-jxhdwetuymk7g2ftgq7n7e.streamlit.app"
+          # Streamlit's health endpoint returns a plain "ok" with no redirect.
+          URL="$BASE/_stcore/health"
           echo "Pinging $URL"
-          STATUS=$(curl -sS -o /dev/null -w "%{http_code}" -L --max-time 60 "$URL")
-          echo "HTTP status: $STATUS"
-          # Treat any response from the server as success — the goal is traffic,
-          # not a specific status code.
-          if [ -z "$STATUS" ] || [ "$STATUS" = "000" ]; then
-            echo "No response from app (connection failed)."
-            exit 1
+          # No -L: we do NOT follow redirects. Following them sent curl into a
+          # redirect loop (exit 47, "too many redirects"). We only need to
+          # generate traffic, so any HTTP status the server returns is success.
+          STATUS=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 60 "$URL")
+          EXIT=$?
+          echo "HTTP status: $STATUS (curl exit: $EXIT)"
+          # A real HTTP status code means we reached the app and delivered traffic.
+          # "000"/empty means a connection-level failure (DNS, timeout, refused).
+          if [ -n "$STATUS" ] && [ "$STATUS" != "000" ]; then
+            echo "Reached the app — traffic delivered, app stays awake."
+            exit 0
           fi
+          echo "No response from app (connection failed)."
+          exit 1
