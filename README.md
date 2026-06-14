@@ -37,17 +37,23 @@ Audio (any lang) → [Whisper Small: translate] → English Text → [Sentiment 
 
 ## Keeping the App Awake
 
-Streamlit Community Cloud puts apps to sleep after a period of inactivity. A
+Streamlit Community Cloud puts apps to sleep after a period of inactivity.
+Importantly, "activity" means a real **viewer session** (a browser holding a
+WebSocket connection) — a plain HTTP request does **not** reset the timer. So a
 GitHub Actions workflow ([`.github/workflows/keep-alive.yml`](.github/workflows/keep-alive.yml))
-pings the app every ~10 minutes on a schedule so it stays awake — no third-party
-service or secrets required.
+drives a headless Chromium browser ([`.github/scripts/keep_awake.py`](.github/scripts/keep_awake.py))
+that actually visits the app every ~30 minutes and holds the session briefly.
+No third-party service or secrets required.
+
+The browser also clicks the **"Yes, get this app back up!"** button, so it
+**auto-wakes** the app if it has already gone to sleep — not just prevents it.
 
 Notes:
 - Scheduled workflows are **disabled automatically after 60 days of no repo
   activity**; any commit (or manually re-enabling in the Actions tab) resumes them.
-- You can trigger a ping manually from the **Actions → Keep Streamlit App Awake →
+- You can trigger a run manually from the **Actions → Keep Streamlit App Awake →
   Run workflow** button.
-- If the app URL changes, update the `URL` value in the workflow file.
+- If the app URL changes, update `APP_URL` in `.github/scripts/keep_awake.py`.
 
 ## Setup & Run Locally
 
