@@ -1,83 +1,73 @@
 # Deploying to Hugging Face Spaces
 
-This app is configured to run on **Hugging Face Spaces** (Streamlit SDK). Spaces
-is a better home than Streamlit Community Cloud for this project because:
+This app runs on **Hugging Face Spaces** using the **Docker SDK**. (Hugging Face
+no longer offers a native Streamlit SDK, so the Streamlit app runs inside the
+`Dockerfile` in this repo, listening on port 7860.)
+
+Spaces is a good home for this project because:
 
 - Your fine-tuned model already lives on the HF Hub.
 - Free CPU Spaces have **16 GB RAM / 2 vCPU** — plenty for Whisper-small + the
   sentiment model.
 - A free Space only **pauses after 48 hours of zero traffic** (and wakes on the
-  next visit) — far gentler than Streamlit Cloud's aggressive sleep. Upgrading to
-  paid hardware removes the pause entirely.
+  next visit) — far gentler than Streamlit Community Cloud's aggressive sleep.
 
 Everything needed is already in this repo:
 
 | File | Purpose |
 |------|---------|
-| `README.md` (YAML frontmatter) | Tells Spaces this is a Streamlit app (`app_file: app.py`) |
+| `README.md` (YAML frontmatter) | `sdk: docker`, `app_port: 7860` — tells Spaces to build the Dockerfile |
+| `Dockerfile` | Installs deps + runs `streamlit run app.py` on port 7860 |
 | `app.py` | The Streamlit application |
-| `requirements.txt` | Python dependencies |
-| `packages.txt` | System packages (`ffmpeg`, for audio decoding) |
+| `requirements.txt` | Python dependencies (installed inside the image) |
 | `.streamlit/config.toml` | Theme + 50 MB upload limit |
 
+> Note: system packages (`ffmpeg`, `libsndfile1`) are installed by the
+> `Dockerfile`. `packages.txt` is only used by non-Docker SDKs and is ignored here.
+
 ---
 
-## Option A — Create the Space and push with git (recommended)
+## Easiest: automatic deploy from GitHub Actions (recommended)
 
-1. **Create the Space**
-   - Go to <https://huggingface.co/new-space>.
-   - **Owner:** your account · **Space name:** e.g. `cathay-pacific-sentiment-analysis`.
-   - **License:** your choice (e.g. MIT).
-   - **SDK:** select **Streamlit**.
-   - **Hardware:** **CPU basic** (free).
-   - **Visibility:** Public.
-   - Click **Create Space**.
+This repo includes `.github/workflows/deploy-hf.yml`, which creates the Space and
+uploads the app on every push to `main`.
 
-2. **Get a write token**
-   - <https://huggingface.co/settings/tokens> → **New token** → role **Write** → copy it.
+1. Create a **write** token: <https://huggingface.co/settings/tokens>.
+2. Add it as a GitHub repo secret named **`HF_TOKEN`**
+   (**Settings → Secrets and variables → Actions → New repository secret**).
+3. Push to `main` (or run **Actions → Deploy to Hugging Face Space → Run workflow**).
 
-3. **Push this repo to the Space**
+The workflow builds the Space at
+`https://huggingface.co/spaces/<user>/cathay-pacific-sentiment-analysis`.
 
-   From the project folder:
+---
+
+## Manual: create the Space and push with git
+
+1. **Create the Space** at <https://huggingface.co/new-space>:
+   - **SDK:** **Docker** → template **Blank**.
+   - **Hardware:** **CPU basic** (free) · **Visibility:** Public.
+2. **Get a write token:** <https://huggingface.co/settings/tokens> → role **Write**.
+3. **Push this repo to the Space:**
 
    ```bash
-   # Add the Space as a git remote (replace <user> and <space-name>)
-   git remote add space https://huggingface.co/spaces/<user>/<space-name>
-
-   # Push the current main branch to the Space's main branch
-   git push space main
+   git remote add space https://huggingface.co/spaces/<user>/cathay-pacific-sentiment-analysis
+   git push space main --force
    ```
-
-   When prompted for credentials:
    - **Username:** your Hugging Face username
-   - **Password:** paste the **write token** from step 2 (not your account password)
+   - **Password:** the **write** token
 
-4. **Wait for the build**
-   - The Space auto-builds (installs `packages.txt` then `requirements.txt`).
-   - First build takes a few minutes (it downloads Whisper-small on first run).
-   - Your app goes live at `https://huggingface.co/spaces/<user>/<space-name>`.
+   (Or via CLI: `pip install -U huggingface_hub`, `hf auth login`,
+   `hf repo create cathay-pacific-sentiment-analysis --repo-type space --space-sdk docker`.)
 
----
-
-## Option B — Upload files in the browser (no git)
-
-1. Create the Space as in Option A, step 1.
-2. Open the Space → **Files** tab → **Add file → Upload files**.
-3. Upload: `app.py`, `requirements.txt`, `packages.txt`, `README.md`, and the
-   `.streamlit/config.toml` (keep it inside a `.streamlit/` folder).
-4. The Space rebuilds automatically after each upload.
+4. The Space builds the Docker image (a few minutes; first run downloads
+   Whisper-small) and goes live at the Space URL.
 
 ---
 
 ## Notes
 
-- **No secrets required.** The model `tonyho5689/cathay-pacific-sentiment-analysis`
-  is public on the Hub, so inference needs no token.
-- **`sdk_version`** in the README frontmatter is pinned to a known-good Streamlit
-  version. If the build complains it's unavailable, bump it to a version listed in
-  the Space's build logs (or remove the line to let Spaces pick the latest).
+- **No secrets required at runtime.** The model
+  `tonyho5689/cathay-pacific-sentiment-analysis` is public on the Hub.
 - **Sleep:** free Spaces pause after 48h idle and wake on the next visit. To never
   pause, upgrade the Space hardware (Settings → Hardware) to a paid tier.
-- **Keeping GitHub and the Space in sync:** re-run `git push space main` after each
-  change, or set up the optional GitHub Action that mirrors pushes to the Space
-  (ask if you want this added — it needs an `HF_TOKEN` repo secret).
