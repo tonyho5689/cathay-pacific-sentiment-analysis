@@ -7,3 +7,8 @@ font = "sans serif"
 
 [server]
 maxUploadSize = 50
+# Required when running behind the Hugging Face Spaces proxy: the file uploader
+# POSTs to /_stcore/upload_file, which Streamlit's XSRF/CORS protection rejects
+# with HTTP 403 through the proxy. Disable both so uploads work.
+enableXsrfProtection = false
+enableCORS = false
