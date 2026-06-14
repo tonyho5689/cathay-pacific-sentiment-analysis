@@ -1,40 +1,36 @@
 name: Keep Streamlit App Awake
 
-# Streamlit Community Cloud puts apps to sleep after a period of inactivity.
-# This workflow sends a lightweight HTTP request to the app on a schedule so
-# that the inactivity timer keeps resetting and the app stays awake.
+# Streamlit Community Cloud puts apps to sleep after a period of inactivity,
+# where "activity" means a real viewer session (a browser holding a WebSocket
+# connection) — NOT a plain HTTP request. So this workflow drives a headless
+# browser to actually visit the app, wake it if it's asleep, and hold the
+# session briefly so the inactivity timer keeps resetting.
 
 on:
   schedule:
-    # Every 10 minutes. GitHub may throttle/delay scheduled runs under load,
-    # which is fine — even an occasional ping every 30+ min keeps the app awake.
-    - cron: "*/10 * * * *"
+    # Every 30 minutes. GitHub throttles/delays scheduled runs under load, but
+    # since the sleep threshold is on the order of days, occasional real visits
+    # are more than enough to keep the app awake.
+    - cron: "*/30 * * * *"
   # Allow manual triggering from the Actions tab for testing.
   workflow_dispatch:
 
 jobs:
-  ping:
+  keep-awake:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping the Streamlit app
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Playwright + Chromium
         run: |
-          # Don't abort on curl's non-zero exit — we inspect the result ourselves.
-          set +e
-          BASE="https://cathay-pacific-sentiment-analysis-jxhdwetuymk7g2ftgq7n7e.streamlit.app"
-          # Streamlit's health endpoint returns a plain "ok" with no redirect.
-          URL="$BASE/_stcore/health"
-          echo "Pinging $URL"
-          # No -L: we do NOT follow redirects. Following them sent curl into a
-          # redirect loop (exit 47, "too many redirects"). We only need to
-          # generate traffic, so any HTTP status the server returns is success.
-          STATUS=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 60 "$URL")
-          EXIT=$?
-          echo "HTTP status: $STATUS (curl exit: $EXIT)"
-          # A real HTTP status code means we reached the app and delivered traffic.
-          # "000"/empty means a connection-level failure (DNS, timeout, refused).
-          if [ -n "$STATUS" ] && [ "$STATUS" != "000" ]; then
-            echo "Reached the app — traffic delivered, app stays awake."
-            exit 0
-          fi
-          echo "No response from app (connection failed)."
-          exit 1
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Visit the app to keep it awake
+        run: python .github/scripts/keep_awake.py
