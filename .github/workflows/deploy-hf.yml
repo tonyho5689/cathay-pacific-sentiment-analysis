@@ -1,0 +1,35 @@
+name: Deploy to Hugging Face Space
+
+# Creates the Streamlit Space (if needed) and uploads the app. Runs on every
+# push to main, and can be triggered manually. Requires an HF_TOKEN repository
+# secret (a Hugging Face *write* token).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Avoid overlapping deploys racing each other.
+concurrency:
+  group: deploy-hf
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install huggingface_hub
+        run: pip install -U "huggingface_hub>=0.25"
+
+      - name: Create Space and upload app
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python .github/scripts/deploy_hf.py
