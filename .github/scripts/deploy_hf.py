@@ -40,11 +40,12 @@ def main() -> int:
 
     api = HfApi(token=token)
 
-    print(f"Ensuring Space {REPO_ID} exists (Streamlit SDK)...")
+    # HF no longer supports a native Streamlit SDK; we run Streamlit via Docker.
+    print(f"Ensuring Space {REPO_ID} exists (Docker SDK)...")
     api.create_repo(
         repo_id=REPO_ID,
         repo_type="space",
-        space_sdk="streamlit",
+        space_sdk="docker",
         exist_ok=True,
     )
 

@@ -3,16 +3,16 @@ title: Cathay Pacific Customer Review Analyzer
 emoji: ✈️
 colorFrom: green
 colorTo: blue
-sdk: streamlit
-sdk_version: 1.40.0
-app_file: app.py
+sdk: docker
+app_port: 7860
 pinned: false
 ---
 
 <!--
-The YAML block above configures this repo as a Hugging Face Space (Streamlit
-SDK). It is ignored by GitHub's normal rendering and used only by Hugging Face.
-See DEPLOY_HF.md for step-by-step deployment instructions.
+The YAML block above configures this repo as a Hugging Face Space (Docker SDK).
+Hugging Face no longer offers a native Streamlit SDK, so the Streamlit app runs
+inside the Dockerfile in this repo on port 7860. The block is ignored by
+GitHub's normal rendering. See DEPLOY_HF.md for deployment instructions.
 -->
 
 # Cathay Pacific Customer Review Analyzer
@@ -59,10 +59,11 @@ there is no reliable free way to prevent it from outside (a plain HTTP ping
 doesn't count as a viewer session, and automating a real browser session from
 CI proved unworkable for this app).
 
-The recommended home is **Hugging Face Spaces** — the fine-tuned model already
-lives on the HF Hub, free CPU Spaces have ample memory, and they only pause
-after 48h idle (waking instantly on the next visit). See
-**[DEPLOY_HF.md](DEPLOY_HF.md)** for step-by-step deployment instructions.
+The recommended home is **Hugging Face Spaces** (Docker SDK — the Streamlit app
+runs via the `Dockerfile` in this repo). The fine-tuned model already lives on
+the HF Hub, free CPU Spaces have ample memory, and they only pause after 48h idle
+(waking instantly on the next visit). See **[DEPLOY_HF.md](DEPLOY_HF.md)** for
+step-by-step deployment instructions.
 
 ## Setup & Run Locally
 
