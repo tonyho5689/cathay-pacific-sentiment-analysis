@@ -1,3 +1,20 @@
+---
+title: Cathay Pacific Customer Review Analyzer
+emoji: ✈️
+colorFrom: green
+colorTo: blue
+sdk: streamlit
+sdk_version: 1.40.0
+app_file: app.py
+pinned: false
+---
+
+<!--
+The YAML block above configures this repo as a Hugging Face Space (Streamlit
+SDK). It is ignored by GitHub's normal rendering and used only by Hugging Face.
+See DEPLOY_HF.md for step-by-step deployment instructions.
+-->
+
 # Cathay Pacific Customer Review Analyzer
 
 **ISOM5240 Deep Learning Business Applications — HKUST**
@@ -35,25 +52,17 @@ Audio (any lang) → [Whisper Small: translate] → English Text → [Sentiment 
 | Streamlit App | `https://cathay-pacific-sentiment-analysis-jxhdwetuymk7g2ftgq7n7e.streamlit.app` |
 | GitHub Repo | `https://github.com/tonyho5689/cathay-pacific-sentiment-analysis` |
 
-## Keeping the App Awake
+## Deployment & App Sleep
 
-Streamlit Community Cloud puts apps to sleep after a period of inactivity.
-Importantly, "activity" means a real **viewer session** (a browser holding a
-WebSocket connection) — a plain HTTP request does **not** reset the timer. So a
-GitHub Actions workflow ([`.github/workflows/keep-alive.yml`](.github/workflows/keep-alive.yml))
-drives a headless Chromium browser ([`.github/scripts/keep_awake.py`](.github/scripts/keep_awake.py))
-that actually visits the app every ~30 minutes and holds the session briefly.
-No third-party service or secrets required.
+Streamlit Community Cloud puts apps to sleep aggressively after inactivity, and
+there is no reliable free way to prevent it from outside (a plain HTTP ping
+doesn't count as a viewer session, and automating a real browser session from
+CI proved unworkable for this app).
 
-The browser also clicks the **"Yes, get this app back up!"** button, so it
-**auto-wakes** the app if it has already gone to sleep — not just prevents it.
-
-Notes:
-- Scheduled workflows are **disabled automatically after 60 days of no repo
-  activity**; any commit (or manually re-enabling in the Actions tab) resumes them.
-- You can trigger a run manually from the **Actions → Keep Streamlit App Awake →
-  Run workflow** button.
-- If the app URL changes, update `APP_URL` in `.github/scripts/keep_awake.py`.
+The recommended home is **Hugging Face Spaces** — the fine-tuned model already
+lives on the HF Hub, free CPU Spaces have ample memory, and they only pause
+after 48h idle (waking instantly on the next visit). See
+**[DEPLOY_HF.md](DEPLOY_HF.md)** for step-by-step deployment instructions.
 
 ## Setup & Run Locally
 
