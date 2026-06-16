@@ -65,6 +65,14 @@ the HF Hub, free CPU Spaces have ample memory, and they only pause after 48h idl
 (waking instantly on the next visit). See **[DEPLOY_HF.md](DEPLOY_HF.md)** for
 step-by-step deployment instructions.
 
+**Stopping the idle pause:** unlike Streamlit Cloud, HF Spaces count plain HTTP
+requests as traffic, so the scheduled workflow
+[`.github/workflows/keep-alive.yml`](.github/workflows/keep-alive.yml) pings the
+Space every 6 hours to keep it from pausing — no setup needed for the default
+Space URL. (Set a `SPACE_URL` repo variable to point it elsewhere.) See
+[DEPLOY_HF.md](DEPLOY_HF.md#keeping-the-space-awake-no-more-idle-pausing) for
+details.
+
 ## Setup & Run Locally
 
 ```bash

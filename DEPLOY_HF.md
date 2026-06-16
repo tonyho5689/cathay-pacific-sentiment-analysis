@@ -65,9 +65,30 @@ The workflow builds the Space at
 
 ---
 
+## Keeping the Space awake (no more idle pausing)
+
+A free Space **pauses after 48 hours of zero traffic**. Unlike Streamlit
+Community Cloud, Hugging Face counts plain HTTP requests as traffic, so a
+scheduled ping is enough to keep the Space running.
+
+This repo includes **`.github/workflows/keep-alive.yml`**, which pings the Space
+every 6 hours (and can be run manually from the **Actions** tab). Nothing to
+configure if your Space lives at the default URL.
+
+- **Default URL pinged:** `https://tonyho5689-cathay-pacific-sentiment-analysis.hf.space`
+- **Different Space?** Add a repo **variable** named `SPACE_URL`
+  (**Settings → Secrets and variables → Actions → Variables → New repository
+  variable**) with your Space's direct host
+  (`https://<user>-<space-name>.hf.space`).
+- **Heads-up:** GitHub disables scheduled workflows on a repo after **60 days of
+  no commits**. Pushing occasionally (or any commit) re-enables them. For a
+  hard guarantee with zero maintenance, upgrade the Space hardware
+  (Settings → Hardware) to a paid tier, which never pauses.
+
 ## Notes
 
 - **No secrets required at runtime.** The model
   `tonyho5689/cathay-pacific-sentiment-analysis` is public on the Hub.
-- **Sleep:** free Spaces pause after 48h idle and wake on the next visit. To never
-  pause, upgrade the Space hardware (Settings → Hardware) to a paid tier.
+- **Sleep:** free Spaces pause after 48h idle and wake on the next visit. The
+  keep-alive workflow above prevents the pause; upgrading the hardware
+  (Settings → Hardware) to a paid tier removes pausing entirely.
