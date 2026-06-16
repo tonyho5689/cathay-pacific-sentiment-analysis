@@ -1,0 +1,54 @@
+name: Keep Hugging Face Space awake
+
+# A free Hugging Face Space pauses after 48 hours of zero traffic. Unlike
+# Streamlit Community Cloud, HF Spaces count plain HTTP requests as traffic, so
+# pinging the Space on a schedule resets the idle timer and keeps it running.
+#
+# This workflow hits the Space URL every 6 hours (well inside the 48h window,
+# leaving slack for GitHub's scheduled-run delays). It can also be run manually.
+
+on:
+  schedule:
+    # Every 6 hours, at minute 17 (off the top of the hour to dodge peak load,
+    # which is when GitHub is most likely to drop/delay scheduled jobs).
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+# Don't stack pings if a previous run is somehow still going.
+concurrency:
+  group: keep-alive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the Space to reset its idle timer
+        env:
+          # The app's direct host. Override with the SPACE_URL repo variable
+          # (Settings -> Secrets and variables -> Actions -> Variables) if your
+          # Space lives at a different URL.
+          SPACE_URL: ${{ vars.SPACE_URL || 'https://tonyho5689-cathay-pacific-sentiment-analysis.hf.space' }}
+        run: |
+          set -euo pipefail
+          echo "Pinging $SPACE_URL"
+
+          # Retry a few times: a paused Space may take a moment to wake, and a
+          # cold start can briefly return 5xx while the container boots.
+          for attempt in 1 2 3 4 5; do
+            code=$(curl -sS -L -o /dev/null -w '%{http_code}' \
+              --max-time 120 \
+              -A "github-actions-keep-alive" \
+              "$SPACE_URL" || echo "000")
+            echo "Attempt $attempt: HTTP $code"
+            if [ "$code" = "200" ] || [ "$code" = "303" ]; then
+              echo "Space is awake."
+              exit 0
+            fi
+            sleep 30
+          done
+
+          echo "Space did not return a healthy status after retries." >&2
+          # Don't fail the workflow: even a request that hits a still-waking
+          # Space counts as traffic and resets the idle timer, which is the goal.
+          exit 0
